@@ -16,6 +16,7 @@ public class Executor {
 
     logger log = new logger();
     fns fn = new fns();
+    Conditions evaluvate = new Conditions();
 
     public Executor(List<String> tokens) {
         this.tokens = tokens;
@@ -37,29 +38,57 @@ public class Executor {
     public void execute() {
         while (index < tokens.size()) {
             String token = tokens.get(index);
-            if (functions.containsKey(token)) {
+    
+            if (token.equals("if")) {
+                String cond = "";
+                List<String> block = new ArrayList<>();
+    
+                index++;
+                while (index < tokens.size() && !tokens.get(index).equals("\\n") && !tokens.get(index).equals("then")) {
+                    cond += tokens.get(index) + " ";
+                    index++;
+                }
+    
+                index++;
+                while (index < tokens.size() && !tokens.get(index).equals("\\n") && !tokens.get(index).equals("endif")) {
+                    block.add(tokens.get(index));
+                    index++;
+                }
+                block.add("\\n");
+                if (tokens.get(index).equals("\\n")) {
+                    index++;
+                }
+                if (tokens.get(index).equals("endif")) {
+                    index++;
+                }
+    
+                if (evaluvate.evaluate(cond)) {
+                    Executor blockExecutor = new Executor(block);
+                    blockExecutor.execute();
+                }
+            } else if (functions.containsKey(token) && index + 1 < tokens.size()) {
 
                 if (functions.get(token).equals("print")) {
                     index++;
+                    
                     List<String> args = new ArrayList<String>();
                     while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
                         args.add(tokens.get(index));
                         index++;
                     }
+
+                    if (tokens.get(index).equals("\\n")) index++;
+
                     fn.print(args);
                 }
 
+            } else if (token.equals("\\n")){
+                index++;
             } else {
-                log.log("Unknown function: " + token, "error");
+                log.log("Unknown token: " + token + " at pos " + index, "error");
+                index++;
             }
-            index++;
         }
     }
-
-    // public static void main(String[] args) {
-    //     Lexer lexer = new Lexer("print \"my world\" 123 true\nif condition then\nprint \"inside if\"\nelse\nprint \"inside else\"\nend\nrepeat 3 times\nprint \"repeat body\"\nend\n");
-    //     List<String> tokens = lexer.tokenize();
-    //     Executor executor = new Executor(tokens);
-    //     executor.execute();
-    // }    
+    
 }

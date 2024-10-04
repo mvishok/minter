@@ -14,16 +14,18 @@ public class Executor {
     private int index;
     private Map<String, String> functions;
     private MemoryManager memoryManager;  // Memory manager instance
+    private fns fn; // Reference to functions
 
     logger log = new logger();
-    fns fn = new fns();
-    Conditions evaluvate = new Conditions();
+    Conditions evaluvate;
 
     public Executor(List<String> tokens) {
         this.tokens = tokens;
         this.index = 0;
         this.functions = new HashMap<>();
         this.memoryManager = new MemoryManager();  // Initialize memory manager
+        this.fn = new fns(memoryManager); // Pass MemoryManager to fns
+        this.evaluvate = new Conditions(memoryManager); // Pass MemoryManager to Conditions
 
         // For print functions
         functions.put("print", "print");
@@ -32,11 +34,35 @@ public class Executor {
         functions.put("say", "print");
         functions.put("output", "print");
         functions.put("write", "print");
+        functions.put("val", "val"); // Add val function
     }
 
     public void execute() {
         while (index < tokens.size()) {
             String token = tokens.get(index);
+
+            // Handle variable assignment
+            if (token.matches("[a-zA-Z_][a-zA-Z0-9_]*") && index + 1 < tokens.size() && tokens.get(index + 1).equals("=")) {
+                String variable = token; // The identifier
+                index += 2; // Move past the identifier and '='
+
+                // Get the value after the assignment
+                String value = "";
+                while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
+                    value += tokens.get(index) + " ";
+                    index++;
+                }
+                value = value.trim(); // Trim any extra spaces
+
+                // If the value is a variable, retrieve its value
+                if (memoryManager.exists(value)) {
+                    value = memoryManager.get(value);
+                }
+
+                memoryManager.assign(variable, value);  // Assign value to variable
+                continue; // Skip further processing for this token
+            }
+
 
             // Handle "if" condition
             if (token.equals("if")) {
@@ -44,7 +70,6 @@ public class Executor {
                 List<String> block = new ArrayList<>();
 
                 index++;
-                // Parse the condition part
                 while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
                     cond += tokens.get(index) + " ";
                     index++;
@@ -52,7 +77,6 @@ public class Executor {
 
                 index++; // Move past the newline after the condition
 
-                // Parse the block inside the "if" statement
                 while (index < tokens.size() && !tokens.get(index).equals("endif")) {
                     block.add(tokens.get(index));
                     index++;
@@ -62,48 +86,51 @@ public class Executor {
                     index++; // Move past "endif"
                 }
 
-                // If the condition evaluates to true, execute the block
-                if (evaluvate.evaluate(cond)) {
+                if (evaluvate.evaluate(cond.trim())) {
                     Executor blockExecutor = new Executor(block);
                     blockExecutor.execute();
                 }
             } 
-            // Handle variable assignment
-            else if (token.contains("=")) {
-                String[] parts = token.split("=");
-                if (parts.length == 2) {
-                    String variable = parts[0].trim();
-                    String value = parts[1].trim();
-                    memoryManager.assign(variable, value);  // Assign value to variable
-                } else {
-                    log.log("Invalid assignment: " + token + " at pos " + index, "error");
-                }
-                index++;
-            } 
-            // Handle function calls like "print"
-            else if (functions.containsKey(token) && index + 1 < tokens.size()) {
-                if (functions.get(token).equals("print")) {
-                    index++;
+            
+            else if (functions.containsKey(token)) {
+                List<String> args = new ArrayList<>();
+                index++; // Move past the function name
 
-                    List<String> args = new ArrayList<>();
+                // Check for parentheses for function arguments
+                if (index < tokens.size() && tokens.get(index).equals("(")) {
+                    index++; // Skip the '('
+                    while (index < tokens.size() && !tokens.get(index).equals(")")) {
+                        if (tokens.get(index).equals(",")) {
+                            index++; // Skip commas
+                            continue;
+                        }
+                        args.add(tokens.get(index));
+                        index++;
+                    }
+                    index++; // Move past ')'
+                } else {
+                    // Otherwise, just read until newline
                     while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
                         args.add(tokens.get(index));
                         index++;
                     }
+                }
 
-                    if (index < tokens.size() && tokens.get(index).equals("\\n")) {
-                        index++;
-                    }
-
-                    fn.print(args); // Call the print function with the arguments
+                // Call the appropriate function
+                if ("print".equals(functions.get(token))) { 
+                    fn.print(args); 
+                } else if ("val".equals(functions.get(token))) { 
+                    String result = fn.val(args);
+                    System.out.println(result); 
                 }
             } 
+
+
             // Handle new lines
             else if (token.equals("\\n")) {
                 index++;
             } 
-            // Log any unknown tokens
-            else {
+            else { 
                 log.log("Unknown token: " + token + " at pos " + index, "error");
                 index++;
             }

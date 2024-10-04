@@ -1,4 +1,5 @@
 import interpreter.*;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -15,7 +16,7 @@ public class minter {
 
         try {
             code = Files.readString(Paths.get(args[0]));
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
         

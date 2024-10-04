@@ -2,13 +2,18 @@ package functions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import memory.MemoryManager;
 import java.lang.reflect.Method;
-
+import modules.logger;
 
 public class fns {
 
+    private logger log = new logger(); // Logger instance
+
     private MemoryManager memoryManager; // Reference to MemoryManager
+
+    private Scanner scanner = new Scanner(System.in); // Scanner for user input
 
     public fns(MemoryManager memoryManager) {
         this.memoryManager = memoryManager; // Initialize MemoryManager
@@ -28,7 +33,7 @@ public class fns {
                 try {
                     parsed.add(Double.parseDouble(arg));
                 } catch (NumberFormatException e) {
-                    System.out.println("Invalid number: " + arg);
+                    //System.out.println("Invalid number: " + arg);
                 }
             } else {
                 try {
@@ -42,7 +47,7 @@ public class fns {
     }
 
     public void print(List<String> args) {
-        // Check if the first argument is 'val'
+
         if (!args.isEmpty() && args.get(0).equals("val")) {
             List<String> valArgs = args.subList(1, args.size()); // Get all args after 'val'
             String valueOutput = val(valArgs); // Get the value
@@ -58,16 +63,27 @@ public class fns {
 
     public String val(List<String> args) {
         StringBuilder result = new StringBuilder();
-        
-        // Handle val with provided arguments
         for (String arg : args) {
             if (memoryManager.exists(arg)) {
-                result.append(memoryManager.get(arg)).append(" "); // Append value with space
+                Object value = memoryManager.get(arg);
+                result.append(value).append(" "); // Append value with space
             } else {
                 result.append(arg).append(" "); // Append the argument itself if not found
             }
         }
         return result.toString().trim(); // Return trimmed result
+    }
+
+    public void input(List<String> args) {
+        if (args.isEmpty()) {
+            return;
+        }
+
+        String varName = args.get(0); // Get the variable name from the first argument
+        String userInput = scanner.nextLine(); // Read user input
+
+        // Store the input in MemoryManager
+        memoryManager.assign(varName, userInput); // Assign the input value to the variable
     }
 
     public String executeFunction(String funcName, List<String> params) {
@@ -80,7 +96,7 @@ public class fns {
             
             return result; // Return the result of the function call
         } catch (NoSuchMethodException e) {
-            System.out.println("Function " + funcName + " does not exist.");
+            log.log("Function " + funcName + " does not exist.", "error");
             return ""; // Return an empty string or handle the error as needed
         } catch (Exception e) {
             e.printStackTrace(); // Handle other exceptions

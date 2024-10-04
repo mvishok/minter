@@ -1,8 +1,11 @@
 package interpreter;
 
 import memory.MemoryManager;
+import modules.logger;
 
 public class Conditions {
+
+    private logger log = new logger();
 
     private MemoryManager memoryManager; // Reference to MemoryManager
 
@@ -16,7 +19,7 @@ public class Conditions {
 
         if (parts.length != 3) {
             // Invalid condition format
-            System.out.println("Invalid condition: " + condition);
+            log.log("Invalid condition: " + condition, "error");
             return false;
         }
 
@@ -58,12 +61,12 @@ public class Conditions {
                     return leftValue >= rightValue;
                 }
                 default -> {
-                    System.out.println("Unsupported operator: " + operator);
+                    log.log("Unsupported operator: " + operator, "error");
                     return false;
                 }
             }
         } catch (NumberFormatException e) {
-            System.out.println("Invalid number format in condition: " + condition);
+            log.log("Invalid number format in condition: " + condition, "error");
             return false;
         }
     }

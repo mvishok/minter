@@ -1,12 +1,11 @@
 import interpreter.*;
-
-import java.util.List;
-import java.util.Scanner;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Scanner;
 
 public class minter {
-    public void main(String[] args) {
+    public static void main(String[] args) {
         
         String code = "";
 
@@ -26,7 +25,7 @@ public class minter {
         executor.execute();
     }
 
-    public void repl() {
+    public static void repl() {
         System.out.println("Minimal INTerpretER (MINTER) v0.1 REPL\n");
         while (true) {
             System.out.print("mint> ");

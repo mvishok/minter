@@ -3,6 +3,14 @@ package functions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
+
+
 import memory.MemoryManager;
 import java.lang.reflect.Method;
 import modules.logger;
@@ -19,6 +27,9 @@ import java.awt.Dimension; // Import Dimension for screen size
 
 public class fns {
 
+    private Connection connection = null; // Database connection
+    private Statement statement = null; // SQL statement
+
     private logger log = new logger(); // Logger instance
 
     private MemoryManager memoryManager; // Reference to MemoryManager
@@ -28,6 +39,19 @@ public class fns {
     private Robot robot; // Robot instance for automation tasks
 
     public fns(MemoryManager memoryManager) {
+        String url = "jdbc:mysql://localhost:3306/minter";  // Replace with your database URL
+        String user = "root";  // Replace with your database username
+        String password = "";  // Replace with your database password
+
+        try {
+            // Establish the connection and create the statement object
+            connection = DriverManager.getConnection(url, user, password);
+            statement = connection.createStatement();
+
+        } catch (SQLException e) {
+            log.log("SQL Error: " + e.getMessage(), "error");
+        }
+
         this.memoryManager = memoryManager; // Initialize MemoryManager
         try {
             this.robot = new Robot(); // Initialize the Robot instance
@@ -251,7 +275,7 @@ public class fns {
                 args.set(i, valueOutput); // Replace "val" with the value
             }
         }
-        
+
 
         for (String arg : args) {
             for (char c : arg.toCharArray()) {
@@ -369,6 +393,176 @@ public class fns {
         }
     }
 
+// Create table function which now uses the global `connection` and `statement`
+    public void create(List<String> args) {
+        if (connection == null || statement == null) {
+            log.log("Database connection is not initialized.", "error");
+            return;
+        }
+
+        if (args.isEmpty()) {
+            log.log("No arguments provided for table creation.", "error");
+            return;
+        }
+
+        String tableName = args.get(0); // The first argument is the table name
+        List<String> columns = args.subList(1, args.size()); // Remaining arguments are column definitions
+
+        // Build the SQL create table query
+        StringBuilder queryBuilder = new StringBuilder("CREATE TABLE " + tableName + " (");
+
+        for (int i = 0; i < columns.size(); i++) {
+            String[] columnDefinition = columns.get(i).split(":");
+
+            if (columnDefinition.length != 2) {
+                log.log("Invalid column definition: " + columns.get(i), "error");
+                return;
+            }
+
+            String columnName = columnDefinition[0];
+            String columnType = columnDefinition[1].toLowerCase();
+
+            // Map custom types to SQL types
+            switch (columnType) {
+                case "int":
+                    columnType = "INT";
+                    break;
+                case "str":
+                    columnType = "VARCHAR(255)";
+                    break;
+                case "text":
+                    columnType = "TEXT";
+                    break;
+                case "bool":
+                    columnType = "BOOLEAN";
+                    break;
+                default:
+                    log.log("Unsupported column type: " + columnType, "error");
+                    return;
+            }
+
+            queryBuilder.append(columnName).append(" ").append(columnType);
+
+            if (i < columns.size() - 1) {
+                queryBuilder.append(", ");
+            }
+        }
+
+        queryBuilder.append(");"); // Close the CREATE TABLE statement
+
+        try {
+            // Execute the SQL query using the global `statement`
+            statement.executeUpdate(queryBuilder.toString());
+
+        } catch (SQLException e) {
+            // Handle SQL exceptions
+            log.log("SQL Error: " + e.getMessage(), "error");
+        }
+    }    
+
+    // Function to check if a table exists
+    public int tableExists(List<String> args) {
+        if (connection == null || statement == null) {
+            log.log("Database connection is not initialized.", "error");
+            return 0;
+        }
+
+        if (args.isEmpty()) {
+            log.log("No arguments provided for checking table existence.", "error");
+            return 0;
+        }
+
+        String tableName = args.get(0); // The first argument is the table name
+        String query = "SHOW TABLES LIKE '" + tableName + "';"; // SQL query to check if the table exists
+
+        ResultSet resultSet = null;
+        
+        try {
+            // Execute the query and retrieve the result
+            resultSet = statement.executeQuery(query);
+
+            // If a result is found, the table exists
+            if (resultSet.next()) {
+                return 1; // Table exists
+            } else {
+                return 0; // Table does not exist
+            }
+
+        } catch (SQLException e) {
+            // Handle SQL exceptions
+            log.log("SQL Error: " + e.getMessage(), "error");
+            return 0;
+        } finally {
+            try {
+                if (resultSet != null) resultSet.close();
+            } catch (SQLException e) {
+                log.log("Error closing result set: " + e.getMessage(), "error");
+            }
+        }
+    }
+
+    // Insert function
+    public void insert(List<String> args) {
+        if (connection == null || statement == null) {
+            log.log("Database connection is not initialized.", "error");
+            return;
+        }
+    
+        if (args.isEmpty()) {
+            log.log("No arguments provided for insert operation.", "error");
+            return;
+        }
+    
+        String tableName = args.get(0); // The first argument is the table name
+        List<String> values = args.subList(1, args.size()); // Remaining arguments are values to be inserted
+    
+        // Prepare the values for the SQL insert query
+        StringBuilder queryBuilder = new StringBuilder("INSERT INTO " + tableName + " VALUES (");
+    
+        for (int i = 0; i < values.size(); i++) {
+            String value = values.get(i).trim();
+    
+            // Check if the value is a variable
+            if (memoryManager.exists(value)) {
+                value = memoryManager.get(value); // Get the value of the variable
+            }
+    
+            // Sanitize and format the value before inserting
+            String sanitizedValue = sanitizeValue(value);
+            queryBuilder.append(sanitizedValue);
+    
+            if (i < values.size() - 1) {
+                queryBuilder.append(", ");
+            }
+        }
+    
+        queryBuilder.append(");"); // Close the INSERT statement
+    
+        try {
+            // Execute the SQL query using a prepared statement
+            PreparedStatement preparedStatement = connection.prepareStatement(queryBuilder.toString());
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            // Handle SQL exceptions
+            log.log("SQL Error: " + e.getMessage(), "error");
+        }
+    }
+    
+    private String sanitizeValue(String value) {
+        // Handle multiline strings and escape single quotes
+        if (value.contains("\n")) {
+            // If it's a multiline string, replace newlines with a space or other character
+            value = value.replace("\n", " ");
+        }
+    
+        // Escape single quotes by replacing them with two single quotes
+        value = value.replace("'", "''");
+    
+        // Handle any other necessary sanitization here
+    
+        // Return the properly formatted string with quotes around it
+        return "'" + value + "'";
+    }    
     // Function to wait for a specific window to appear
     // public void waitForWindow(List<String> args) {
     //     if (args.size() == 1) {

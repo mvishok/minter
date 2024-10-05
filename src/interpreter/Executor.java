@@ -128,18 +128,33 @@ public class Executor {
         functions.put("setClipboard", "setClipboard");
         functions.put("setclipboard", "setClipboard");
         functions.put("clipboard", "setClipboard");
+
+        // for create
+        functions.put("create", "create");
+
+        // exists
+        functions.put("exists", "tableExists");
+
+        // for insert
+        functions.put("insert", "insert");
         
+    }
+
+    private boolean isScientificNotation(String value) {
+        String regex = "^[+-]?\\d*\\.?\\d+[eE][+-]?\\d+$";
+        return value.matches(regex);
     }
 
     private String evaluateExpression(String expression) {
         String originalExpression = expression;
-
-        // Split the expression into tokens
-        String[] tokens = expression.split(" ");
-
+    
+        // Use regex to split expression into tokens, capturing quoted strings
+        // This regex will handle strings enclosed in single or double quotes, including multiline.
+        String[] tokens = expression.split("(?<!\\\\)\\s+(?=(?:[^\\\"]*\\\"[^\\\"]*\\\"*[^\\\"]*$)*[^\\\"]*$)");
+    
         for (int i = 0; i < tokens.length; i++) {
-            String token = tokens[i];
-
+            String token = tokens[i].trim();
+    
             // If the token is a variable, retrieve its value from memoryManager
             if (memoryManager.exists(token)) {
                 Object value = memoryManager.get(token);
@@ -149,61 +164,66 @@ public class Executor {
             // If the token is a function, evaluate the function
             else if (functions.containsKey(token)) {
                 List<String> args = new ArrayList<>();
-
+    
                 // From the next token onwards, treat them as function arguments
                 for (int j = i + 1; j < tokens.length; j++) {
-                    args.add(tokens[j]);
+                    args.add(tokens[j].trim());
                 }
-
+    
                 // Evaluate the function with the arguments
                 Object response = evaluateFunction(token, args);
                 String result = response instanceof Number ? String.valueOf(((Number) response).intValue()) : response.toString();
-
+    
                 // Replace the function and its arguments in the expression
-                expression = expression.replace(token + " " + String.join(" ", args), result);
+                String argsString = String.join(" ", args);
+                if (args.isEmpty()) {
+                    expression = expression.replace(token, result);
+                } else {
+                    expression = expression.replace(token + " " + argsString, result);
+                }
                 break; // Exit after replacing the function call to avoid reprocessing
             }
         }
-
+    
         // If the expression is empty or null, return the original expression
         if (expression == null || expression.isEmpty()) {
             return originalExpression;
         }
-
+    
         // Evaluate the final expression (if numeric operations are required)
         Expression expr = new Expression(expression);
         EvaluationValue result;
         try {
             result = expr.evaluate();
             String numberValue = result.getNumberValue().toString();
-
+    
             // Convert numberValue to BigDecimal for rounding
             BigDecimal bdValue = new BigDecimal(numberValue);
             bdValue = bdValue.setScale(2, RoundingMode.HALF_UP); // Round to 2 decimal places
-
+    
             return bdValue.toString(); // Return the rounded value
         } catch (EvaluationException | ParseException e) {
-            return originalExpression; // Return original expression if evaluation fails
+            return expression; // Return original expression if evaluation fails
         }
     }
-        
+                  
     private Object evaluateFunction(String functionName, List<String> args) {
-        // Evaluate each argument before passing it to the function
-        for (int i = 0; i < args.size(); i++) {
-            String arg = args.get(i);
-            // If the argument is a variable, evaluate it
-            if (memoryManager.exists(arg)) {
-                args.set(i, memoryManager.get(arg).toString());
-            } else {
-                // Try to evaluate it as an expression if it's not a known variable
-                try {
-                    args.set(i, evaluateExpression(arg));
-                } catch (Exception e) {
-                    // Keep the original if evaluation fails
-                    args.set(i, arg);
-                }
+    // Evaluate each argument before passing it to the function
+    for (int i = 0; i < args.size(); i++) {
+        String arg = args.get(i);
+        // If the argument is a variable, evaluate it
+        if (memoryManager.exists(arg)) {
+            args.set(i, memoryManager.get(arg).toString());
+        } else {
+            // Try to evaluate it as an expression if it's not a known variable
+            try {
+                args.set(i, evaluateExpression(arg));
+            } catch (Exception e) {
+                // Keep the original if evaluation fails
+                args.set(i, arg);
             }
         }
+    }
     
         if ("print".equals(functions.get(functionName))) { 
             fn.print(args); 
@@ -241,6 +261,12 @@ public class Executor {
             return fn.getClipboard();
         } else if ("setClipboard".equals(functions.get(functionName))) {
             fn.setClipboard(args);
+        } else if ("create".equals(functions.get(functionName))) {
+            fn.create(args);
+        } else if ("tableExists".equals(functions.get(functionName))) {
+            return fn.tableExists(args);
+        } else if ("insert".equals(functions.get(functionName))) {
+            fn.insert(args);
         } else {
             return functionName; // Return the function name if not found
         }
@@ -268,7 +294,7 @@ public class Executor {
             String evaluatedValue = evaluateExpression(value);
 
             // Correct floating-point to integer if necessary
-            if (evaluatedValue.contains("E")) {  // If scientific notation exists, convert it
+            if (isScientificNotation(evaluatedValue)) {  // If scientific notation exists, convert it
                 try {
                     double parsedValue = Double.parseDouble(evaluatedValue);
                     evaluatedValue = String.valueOf((int) parsedValue); // Convert to integer
@@ -280,8 +306,8 @@ public class Executor {
             memoryManager.assign(variable, evaluatedValue); // Assign evaluated value to variable
             continue; // Skip further processing for this token
         }
-            // Handle "if" condition
-            if (token.equals("if")) {
+        // Handle "if" condition
+        if (token.equals("if")) {
                 String cond = "";
                 List<String> ifBlock = new ArrayList<>();
                 List<String> elseBlock = new ArrayList<>();
@@ -290,6 +316,13 @@ public class Executor {
                 while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
                     cond += tokens.get(index) + " ";
                     index++;
+                }
+
+                //split with spaces and evaluate the expression
+                for (String s : cond.split(" ")) {
+                    if (memoryManager.exists(s)) {
+                        cond = cond.replace(s, memoryManager.get(s).toString());
+                    }
                 }
 
                 index++; // Move past the newline after the condition
@@ -330,35 +363,35 @@ public class Executor {
                 }
             }
 
-            else if (functions.containsKey(token)) {
-                List<String> args = new ArrayList<>();
-                index++; // Move past the function name
+        else if (functions.containsKey(token)) {
+            List<String> args = new ArrayList<>();
+            index++; // Move past the function name
 
-                // Check for parentheses for function arguments
-                if (index < tokens.size() && tokens.get(index).equals("(")) {
-                    index++; // Skip the '('
-                    while (index < tokens.size() && !tokens.get(index).equals(")")) {
-                        if (tokens.get(index).equals(",")) {
-                            index++; // Skip commas
-                            continue;
-                        }
-                        args.add(tokens.get(index));
-                        index++;
+            // Check for parentheses for function arguments
+            if (index < tokens.size() && tokens.get(index).equals("(")) {
+                index++; // Skip the '('
+                while (index < tokens.size() && !tokens.get(index).equals(")")) {
+                    if (tokens.get(index).equals(",")) {
+                        index++; // Skip commas
+                        continue;
                     }
-                    index++; // Move past ')'
-                } else {
-                    // Otherwise, just read until newline
-                    while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
-                        args.add(tokens.get(index));
-                        index++;
-                    }
+                    args.add(tokens.get(index));
+                    index++;
                 }
+                index++; // Move past ')'
+            } else {
+                // Otherwise, just read until newline
+                while (index < tokens.size() && !tokens.get(index).equals("\\n")) {
+                    args.add(tokens.get(index));
+                    index++;
+                }
+            }
 
-                // Call the appropriate function
-                evaluateFunction(token, args);
-            } else if (token.equals("\\n")) {
-                index++;
-            } else { 
+            // Call the appropriate function
+            evaluateFunction(token, args);
+        } else if (token.equals("\\n")) {
+            index++;
+        } else { 
                 log.log("Unknown token: " + token + " at pos " + index, "error");
                 index++;
             }

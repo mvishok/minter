@@ -16,17 +16,17 @@ public class Conditions {
     public boolean evaluate(String condition) {
         // Split the condition into parts: "1", "==", "1"
         String[] parts = condition.trim().split(" ");
-
+    
         if (parts.length != 3) {
             // Invalid condition format
             log.log("Invalid condition: " + condition, "error");
             return false;
         }
-
+    
         String left = parts[0].trim();
         String operator = parts[1].trim();
         String right = parts[2].trim();
-
+    
         // Retrieve values from MemoryManager if they are variables
         if (memoryManager.exists(left)) {
             left = memoryManager.get(left); // Get the value of the variable
@@ -35,12 +35,12 @@ public class Conditions {
         if (memoryManager.exists(right)) {
             right = memoryManager.get(right); // Get the value of the variable
         }
-
+    
         // Basic comparison logic
         try {
-            int leftValue = Integer.parseInt(left);
-            int rightValue = Integer.parseInt(right);
-
+            double leftValue = Double.parseDouble(left); // Change to Double
+            double rightValue = Double.parseDouble(right); // Change to Double
+    
             switch (operator) {
                 case "==" -> {
                     return leftValue == rightValue;
@@ -70,4 +70,5 @@ public class Conditions {
             return false;
         }
     }
+    
 }

@@ -242,6 +242,17 @@ public class fns {
 
     // Function to type the arguments as keyboard input
     public void type(List<String> args) {
+
+        // if args contains "val" then get the value of the variable
+        for (int i = 0; i < args.size(); i++) {
+            if (args.get(i).equals("val")) {
+                List<String> valArgs = args.subList(i + 1, args.size()); // Get all args after 'val'
+                String valueOutput = val(valArgs).toString(); // Get the value
+                args.set(i, valueOutput); // Replace "val" with the value
+            }
+        }
+        
+
         for (String arg : args) {
             for (char c : arg.toCharArray()) {
                 robot.keyPress(KeyEvent.getExtendedKeyCodeForChar(c)); // Simulate key press
@@ -329,8 +340,8 @@ public class fns {
 
     // Function to open an application by path
     public void openApp(List<String> args) {
-        if (args.size() == 1) {
-            String appPath = args.get(0); // Get the application path
+        if (args.size() > 0) {
+            String appPath = String.join(" ", args);
             try {
                 ProcessBuilder processBuilder = new ProcessBuilder(appPath); // Use ProcessBuilder to execute the application
                 processBuilder.start(); // Start the process
@@ -338,7 +349,7 @@ public class fns {
                 log.log("Error opening application: " + e.getMessage(), "error");
             }
         } else {
-            log.log("Invalid arguments for openApp. Expected 1 argument (appPath).", "error");
+            log.log("Invalid arguments for openApp. Expected atleast 1 argument (appPath).", "error");
         }
     }
     

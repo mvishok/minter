@@ -96,7 +96,6 @@ public class Executor {
         functions.put("type", "type");
         functions.put("write", "type");
         functions.put("enter", "type");
-        functions.put("press", "type");
 
         // for wait functions
         functions.put("wait", "waitFor");
@@ -104,6 +103,32 @@ public class Executor {
         functions.put("pause", "waitFor");
         functions.put("delay", "waitFor");
         functions.put("hold", "waitFor");
+
+        // for pressKeys functions
+        functions.put("pressKeys", "pressKeys");
+        functions.put("presskeys", "pressKeys");
+        functions.put("press", "pressKeys");
+
+        // for open app
+        functions.put("open", "openApp");
+        functions.put("launch", "openApp");
+        functions.put("start", "openApp");
+
+        // for close app
+        functions.put("closeApp", "closeApp");
+        functions.put("closeapp", "closeApp");
+        functions.put("kill", "closeApp");
+        functions.put("close", "closeApp");
+
+        // for getClipboard
+        functions.put("getClipboard", "getClipboard");
+        functions.put("getclipboard", "getClipboard");
+
+        // for setClipboard
+        functions.put("setClipboard", "setClipboard");
+        functions.put("setclipboard", "setClipboard");
+        functions.put("clipboard", "setClipboard");
+        
     }
 
     private String evaluateExpression(String expression) {
@@ -206,6 +231,16 @@ public class Executor {
             fn.drag(args);
         } else if ("scroll".equals(functions.get(functionName))) {
             fn.scroll(args);
+        } else if ("pressKeys".equals(functions.get(functionName))) {
+            fn.pressKeys(args);
+        } else if ("openApp".equals(functions.get(functionName))) {
+            fn.openApp(args);
+        } else if ("closeApp".equals(functions.get(functionName))) {
+            fn.closeApp(args);
+        } else if ("getClipboard".equals(functions.get(functionName))) {
+            return fn.getClipboard();
+        } else if ("setClipboard".equals(functions.get(functionName))) {
+            fn.setClipboard(args);
         } else {
             return functionName; // Return the function name if not found
         }

@@ -10,7 +10,11 @@ import java.awt.Robot;  // Import Robot for automation
 import java.awt.AWTException;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.awt.Toolkit; // Import Toolkit for screen size
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.Dimension; // Import Dimension for screen size
 
 public class fns {
@@ -79,12 +83,11 @@ public class fns {
         }
     
         String firstArg = args.get(0); // Get the first argument, which could be a variable or function name
-        List<String> remainingArgs = args.subList(1, args.size()); // All other arguments are considered function parameters
-    
+        
         // Check if the first argument is a function that needs to be executed
         try {
-            Method method = this.getClass().getDeclaredMethod(firstArg, List.class); // Look for the function by name
-            Object result = method.invoke(this, remainingArgs); // Call the function with the remaining arguments
+            Method method = this.getClass().getDeclaredMethod(firstArg); // Look for the function by name
+            Object result = method.invoke(this); // Call the function with no parameters
             return result; // Return the result (it could be String, Integer, etc.)
         } catch (NoSuchMethodException e) {
             // If it's not a function, check if it's a variable stored in memory
@@ -98,8 +101,7 @@ public class fns {
             return ""; // Return an empty string or handle the error as needed
         }
     }
-    
-    
+          
     public void input(List<String> args) {
         if (args.isEmpty()) {
             return;
@@ -256,4 +258,145 @@ public class fns {
         }
     }
 
+    // Function to simulate pressing key combinations
+    public void pressKeys(List<String> args) {
+        // Create a map of string representations to KeyEvent constants
+        java.util.Map<String, Integer> keyMap = new java.util.HashMap<>();
+        keyMap.put("ctrl", KeyEvent.VK_CONTROL);
+        keyMap.put("shift", KeyEvent.VK_SHIFT);
+        keyMap.put("alt", KeyEvent.VK_ALT);
+        keyMap.put("a", KeyEvent.VK_A);
+        keyMap.put("b", KeyEvent.VK_B);
+        keyMap.put("c", KeyEvent.VK_C);
+        keyMap.put("d", KeyEvent.VK_D);
+        keyMap.put("e", KeyEvent.VK_E);
+        keyMap.put("f", KeyEvent.VK_F);
+        keyMap.put("g", KeyEvent.VK_G);
+        keyMap.put("h", KeyEvent.VK_H);
+        keyMap.put("i", KeyEvent.VK_I);
+        keyMap.put("j", KeyEvent.VK_J);
+        keyMap.put("k", KeyEvent.VK_K);
+        keyMap.put("l", KeyEvent.VK_L);
+        keyMap.put("m", KeyEvent.VK_M);
+        keyMap.put("n", KeyEvent.VK_N);
+        keyMap.put("o", KeyEvent.VK_O);
+        keyMap.put("p", KeyEvent.VK_P);
+        keyMap.put("q", KeyEvent.VK_Q);
+        keyMap.put("r", KeyEvent.VK_R);
+        keyMap.put("s", KeyEvent.VK_S);
+        keyMap.put("t", KeyEvent.VK_T);
+        keyMap.put("u", KeyEvent.VK_U);
+        keyMap.put("v", KeyEvent.VK_V);
+        keyMap.put("w", KeyEvent.VK_W);
+        keyMap.put("x", KeyEvent.VK_X);
+        keyMap.put("y", KeyEvent.VK_Y);
+        keyMap.put("z", KeyEvent.VK_Z);
+        keyMap.put("0", KeyEvent.VK_0);
+        keyMap.put("1", KeyEvent.VK_1);
+        keyMap.put("2", KeyEvent.VK_2);
+        keyMap.put("3", KeyEvent.VK_3);
+        keyMap.put("4", KeyEvent.VK_4);
+        keyMap.put("5", KeyEvent.VK_5);
+        keyMap.put("6", KeyEvent.VK_6);
+        keyMap.put("7", KeyEvent.VK_7);
+        keyMap.put("8", KeyEvent.VK_8);
+        keyMap.put("9", KeyEvent.VK_9);
+        keyMap.put("enter", KeyEvent.VK_ENTER);
+        keyMap.put("backspace", KeyEvent.VK_BACK_SPACE);
+        keyMap.put("space", KeyEvent.VK_SPACE);
+
+        // Press and release the keys in the specified combination
+        try {
+            for (String key : args) {
+                Integer keyCode = keyMap.get(key.toLowerCase()); // Get the key code from the map
+                if (keyCode != null) {
+                    robot.keyPress(keyCode); // Press the key
+                } else {
+                    log.log("Unknown key: " + key, "error");
+                }
+            }
+            // Release the keys in the reverse order
+            for (String key : args) {
+                Integer keyCode = keyMap.get(key.toLowerCase());
+                if (keyCode != null) {
+                    robot.keyRelease(keyCode); // Release the key
+                }
+            }
+        } catch (Exception e) {
+            log.log("Error pressing keys: " + e.getMessage(), "error");
+        }
+    }
+
+    // Function to open an application by path
+    public void openApp(List<String> args) {
+        if (args.size() == 1) {
+            String appPath = args.get(0); // Get the application path
+            try {
+                ProcessBuilder processBuilder = new ProcessBuilder(appPath); // Use ProcessBuilder to execute the application
+                processBuilder.start(); // Start the process
+            } catch (IOException e) {
+                log.log("Error opening application: " + e.getMessage(), "error");
+            }
+        } else {
+            log.log("Invalid arguments for openApp. Expected 1 argument (appPath).", "error");
+        }
+    }
+    
+    // Function to close an open application by name
+    public void closeApp(List<String> args) {
+        if (args.size() == 1) {
+            String appName = args.get(0); // Get the application name
+            try {
+                // Use ProcessBuilder to execute a command to close the application
+                ProcessBuilder processBuilder = new ProcessBuilder("taskkill", "/IM", appName, "/F");
+                processBuilder.start(); // Start the process
+            } catch (IOException e) {
+                log.log("Error closing application: " + e.getMessage(), "error");
+            }
+        } else {
+            log.log("Invalid arguments for closeApp. Expected 1 argument (appName).", "error");
+        }
+    }
+
+    // Function to wait for a specific window to appear
+    // public void waitForWindow(List<String> args) {
+    //     if (args.size() == 1) {
+    //         String windowName = args.get(0); // Get the window name
+    //         // Implement logic to check for window presence (placeholder)
+    //         // This is system-dependent and might require additional libraries
+    //         log.log("Waiting for window: " + windowName, "info");
+    //         // You can implement actual waiting logic depending on your OS and environment
+    //         // Example (pseudo-code):
+    //         // while (!isWindowOpen(windowName)) {
+    //         //     Thread.sleep(1000); // Wait for 1 second before checking again
+    //         // }
+    //     } else {
+    //         log.log("Invalid arguments for waitForWindow. Expected 1 argument (windowName).", "error");
+    //     }
+    // }
+
+    // Function to get the current content of the clipboard
+    public String getClipboard() {
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard(); // Get the system clipboard
+        Transferable contents = clipboard.getContents(null); // Get the clipboard contents
+        if (contents != null && contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+            try {
+                return (String) contents.getTransferData(DataFlavor.stringFlavor); // Return clipboard text
+            } catch (Exception e) {
+                log.log("Error getting clipboard content: " + e.getMessage(), "error");
+            }
+        }
+        return ""; // Return empty if no text is found
+    }
+
+    // Function to set text into the clipboard
+    public void setClipboard(List<String> args) {
+        if (args.size() == 1) {
+            String text = args.get(0); // Get the text to set into the clipboard
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard(); // Get the system clipboard
+            clipboard.setContents(new java.awt.datatransfer.StringSelection(text), null); // Set clipboard content
+        } else {
+            log.log("Invalid arguments for setClipboard. Expected 1 argument (text).", "error");
+        }
+    }
 }

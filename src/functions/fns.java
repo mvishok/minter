@@ -295,6 +295,11 @@ public class fns {
 
     // Function to simulate pressing key combinations
     public void pressKeys(List<String> args) {
+        //args must be greater than 0
+        if (args.size() == 0) {
+            log.log("Invalid arguments for pressKeys. Expected atleast 1 argument.", "error");
+            return;
+        }
         // Create a map of string representations to KeyEvent constants
         java.util.Map<String, Integer> keyMap = new java.util.HashMap<>();
         keyMap.put("ctrl", KeyEvent.VK_CONTROL);
@@ -339,6 +344,12 @@ public class fns {
         keyMap.put("enter", KeyEvent.VK_ENTER);
         keyMap.put("backspace", KeyEvent.VK_BACK_SPACE);
         keyMap.put("space", KeyEvent.VK_SPACE);
+        keyMap.put("tab", KeyEvent.VK_TAB);
+        keyMap.put("esc", KeyEvent.VK_ESCAPE);
+
+        keyMap.put("plus", KeyEvent.VK_PLUS);
+        keyMap.put("f1", KeyEvent.VK_F1);
+
 
         // Press and release the keys in the specified combination
         try {
